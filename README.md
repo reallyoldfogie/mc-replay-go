@@ -81,16 +81,74 @@ mc-agent uses github.com/Tnze/go-mc and dispatches pk.Packet values to handlers.
 
 This records every clientbound packet after decode, which avoids transport-layer encryption and compression concerns.
 
-CLI
----
+Automatic Validation
+--------------------
 
-Build and run the example creator:
+All replay files created with `mcpr.Create()` are **automatically validated** when `Close()` is called. This ensures:
+- Valid ZIP file structure
+- Required files present (recording.tmcpr, metaData.json)
+- Parseable metadata
+- ReplayMod compatibility
+
+No extra steps needed - validation happens transparently:
+
+  w, _ := mcpr.Create("replay.mcpr", mcpr.Meta{Protocol: 770})
+  defer w.Close() // ← Automatic validation happens here
+
+Validation results are logged:
+
+  [mcpr] Validated replay.mcpr: 1.21.5 protocol 770, 15000 ms, 1234567 bytes
+
+Replay Validator CLI
+-------------------
+
+Validate existing replay files manually:
+
+  # Build the validator
+  go build ./cmd/mcpr-validate
+
+  # Validate single file
+  ./mcpr-validate replay.mcpr
+
+  # Validate multiple files
+  ./mcpr-validate replays/*.mcpr
+
+  # Quiet mode (errors only)
+  ./mcpr-validate -q replays/*.mcpr
+
+  # Verbose mode
+  ./mcpr-validate -v replay.mcpr
+
+Manual Validation in Code
+-------------------------
+
+You can also validate replay files programmatically:
+
+  import "github.com/reallyoldfogie/mc-replay-go/mcpr"
+
+  // Normal validation with logging
+  err := mcpr.ValidateFile("replay.mcpr")
+  if err != nil {
+    log.Printf("Validation failed: %v", err)
+  }
+
+  // Quiet validation (no logs)
+  err := mcpr.ValidateFileQuiet("replay.mcpr")
+
+CLI Tools
+---------
+
+**mcpr-create** - Create test replay files:
 
   go run ./cmd/mcpr-create -out example.mcpr -protocol 754 \
     --packet 0:0x26:0AFFEE \
     --packet 1500:0x3A:DEADBEEF
 
 Each --packet is ts:id:hexpayload. If you omit --packet, it creates a valid empty replay.
+
+**mcpr-validate** - Validate replay files:
+
+  go run ./cmd/mcpr-validate replays/*.mcpr
 
 Integration Example: Proxy Recorder
 -----------------------------------

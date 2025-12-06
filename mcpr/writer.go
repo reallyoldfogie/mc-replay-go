@@ -27,6 +27,7 @@ type Writer struct {
     duration uint32
     closed   bool
     file     *os.File  // optional, when using Create()
+    filePath string    // optional, path to file for validation
     crc32    hash.Hash32 // CRC32 hash for recording.tmcpr validation
 }
 
@@ -62,7 +63,7 @@ func NewWriter(out io.Writer, meta Meta) (*Writer, error) {
 }
 
 // Create opens/creates a file at path and returns a Writer that owns the file descriptor.
-// Close() will also close the underlying file.
+// Close() will also close the underlying file and automatically validate it.
 func Create(path string, meta Meta) (*Writer, error) {
     f, err := os.Create(path)
     if err != nil {
@@ -74,6 +75,7 @@ func Create(path string, meta Meta) (*Writer, error) {
         return nil, err
     }
     w.file = f
+    w.filePath = path
     return w, nil
 }
 
@@ -200,7 +202,17 @@ func (w *Writer) Close() error {
     }
     w.closed = true
     if w.file != nil {
-        return w.file.Close()
+        if err := w.file.Close(); err != nil {
+            return err
+        }
     }
+
+    // Automatically validate the file if we created it
+    if w.filePath != "" {
+        if err := ValidateFile(w.filePath); err != nil {
+            return fmt.Errorf("validation failed: %w", err)
+        }
+    }
+
     return nil
 }
