@@ -5,6 +5,9 @@
 *.so
 *.dylib
 *.mcpr
+mcpr-validate
+mcpr-create
+mc-replay-go
 
 # Test binary, built with `go test -c`
 *.test
